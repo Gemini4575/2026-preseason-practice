@@ -1,0 +1,265 @@
+package frc.robot.subsystems.drivetrainIOLayers;
+
+import com.revrobotics.spark.SparkMax;
+
+import static frc.robot.Constants.SwerveConstants.MOTOR_MAX_RPM;
+
+import com.revrobotics.RelativeEncoder;
+import com.revrobotics.spark.SparkBase.PersistMode;
+import com.revrobotics.spark.SparkBase.ResetMode;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.config.SparkBaseConfig;
+import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.wpilibj.AnalogInput;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.RobotState;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.lib.math.SwerveModuleConstants;
+import frc.robot.Constants.SwerveConstants;
+
+public class SwerveModule extends SubsystemBase {
+
+    private static final double DISTANCE_CORRECTION_FACTOR = 0.97;
+
+    private ProfiledPIDController turningPidController = new ProfiledPIDController(
+            3.1, // Proportional gain
+            0.0, // Integral gain
+            0.01,
+            new TrapezoidProfile.Constraints(
+                    SwerveConstants.kModuleMaxAngularVelocity,
+                    SwerveConstants.kModuleMaxAngularAcceleration));
+    // KB not being used right now might go back into use later
+    // private ProfiledPIDController drivingPidController = new
+    // ProfiledPIDController(
+    // 1.0, // Proportional gain
+    // 0.0, // Integral gain
+    // 0.0,
+    // new TrapezoidProfile.Constraints(
+    // SwerveConstants.MaxMetersPersecond,
+    // SwerveConstants.kMaxAceceration));
+
+    private final PIDController m_drivePIDController = new PIDController(1.6, 0, 0.05);
+
+    private SparkMax driveMotor;
+    private SparkMax angleMotor;
+
+    private AnalogInput Encoder;
+    private RelativeEncoder m_driveEncoder;
+
+    private double angleOffset;
+
+    private int moduleNumber;
+
+    private static final boolean STUCK_PROTECTION_ENABLED = true;
+    private static final long ANGLE_STUCK_TIME_THRESHOLD_MS = 300;
+    private static final long ANGLE_CORRECTION_TIME_THRESHOLD_MS = 50;
+    private static final double ANGLE_DIVERGENCE_TOLERANCE = 7.0 * Math.PI / 180.0; // radians
+    private long angleDivergenceStartTime = -1;
+    private long angleCorrectionStartTime = -1;
+
+    public SwerveModule(SwerveModuleConstants s) {
+        driveMotor = new SparkMax(s.driveMotorID, MotorType.kBrushless);
+        angleMotor = new SparkMax(s.angleMotorID, MotorType.kBrushless);
+        SparkBaseConfig driveMotorConfig = new SparkMaxConfig();
+        SparkBaseConfig angleMotorConfig = new SparkMaxConfig();
+        driveMotorConfig.smartCurrentLimit(40, 40);
+        driveMotorConfig.disableFollowerMode();
+        driveMotorConfig.inverted(true);
+        driveMotorConfig.idleMode(IdleMode.kBrake);
+        angleMotorConfig.apply(driveMotorConfig);
+
+        driveMotorConfig.signals.primaryEncoderPositionAlwaysOn(true);
+        driveMotorConfig.signals.primaryEncoderPositionPeriodMs(5);
+
+        driveMotor.configure(driveMotorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        angleMotor.configure(angleMotorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+        Encoder = new AnalogInput(s.cancoderID);
+
+        m_driveEncoder = driveMotor.getEncoder();
+
+        angleOffset = -s.angleOffset;
+
+        moduleNumber = s.cancoderID; // Assuming module number is based on drive motor ID for simplicity
+
+        turningPidController.enableContinuousInput(-Math.PI, Math.PI);
+
+        m_driveEncoder.setPosition(0);
+    }
+
+    @Override
+    public void periodic() {
+        if (RobotState.isTest()) {
+            SmartDashboard.putNumber("[Swerve]encoder raw " + moduleNumber, getRawAngle());
+        }
+    }
+
+    private double encoderValue() {
+        var retVal = getRawAngle();
+        // SmartDashboard.putNumber("[Swerve]module " + moduleNumber, retVal);
+        if (RobotState.isTest()) {
+            SmartDashboard.putNumber("[Swerve]encoder raw " + moduleNumber, retVal);
+        }
+
+        SmartDashboard.putNumber("[Swerve]encoder " + moduleNumber, (retVal * 1000) / 1000.0);
+        SmartDashboard.putNumber("[Swerve]encoder degrees " + moduleNumber, (retVal * (180 / Math.PI) * 1000) / 1000.0);
+
+        retVal = (retVal + angleOffset) % (2.0 * Math.PI); // apply offset for this encoder and map it back onto [0,
+                                                           // 2pi]
+
+        if (retVal < 0) {
+            retVal += (2.0 * Math.PI); // map negative values to [0, 2pi]
+        }
+
+        // might need this so we're in the same range as the pid controller is
+        // expecting.
+        // retVal = retVal - Math.PI;
+        if (RobotState.isTest()) {
+            SmartDashboard.putNumber("[Swerve]encoder adjusted " + moduleNumber, retVal);
+        }
+
+        SmartDashboard.putNumber("[Swerve]EncoderValue() " + moduleNumber, retVal);
+        return (retVal);
+    }
+
+    private double getRawAngle() {
+        var retVal = Encoder.getVoltage() / RobotController.getVoltage5V(); // convert voltage to %
+        retVal = 2.0 * Math.PI * retVal; // get % of circle encoder is reading
+        return retVal;
+    }
+
+    /**
+     * Returns the current state of the module.
+     *
+     * @return The current state of the module.
+     */
+    // public SwerveModuleState getState() {
+    // var s = getConvertedVelocity();
+    // return new SwerveModuleState(
+    // s, new Rotation2d(encoderValue()));
+    // }
+
+    private double getConvertedVelocity() {
+        return (m_driveEncoder.getVelocity() / (60.0 * SwerveConstants.gearboxRatio))
+                * ((SwerveConstants.kWheelRadius * 2) * Math.PI);
+    }
+
+    private double getCurrentSpeedAsPercentage() {
+        return m_driveEncoder.getVelocity() / MOTOR_MAX_RPM;
+    }
+
+    /**
+     * Returns the current position of the module.
+     *
+     * @return The current position of the module.
+     */
+    public SwerveModulePosition getPosition() {
+        // encode is % rotations
+        var retVal = DISTANCE_CORRECTION_FACTOR
+                * ((m_driveEncoder.getPosition() / SwerveConstants.gearboxRatio) * (SwerveConstants.kWheelRadius * 2)
+                        * Math.PI); // distance
+
+        // in
+        // whatever
+        // units
+        // the
+        // wheel
+        // diameter
+        // is
+        // KB ^^^^ This is from 1 meter testing dont move/change
+        return new SwerveModulePosition(retVal, new Rotation2d(encoderValue()));
+    }
+
+    public void SetDesiredState(SwerveModuleState desiredState) {
+        double currentSpeedPercentage = getCurrentSpeedAsPercentage();
+        double currentAngle = encoderValue();
+
+        SmartDashboard.putNumber("Speed " + moduleNumber, currentSpeedPercentage);
+        SmartDashboard.putNumber("[Swerve]Pre Optimize angle target degrees " + moduleNumber,
+                desiredState.angle.getDegrees());
+        // Optimize the reference state to avoid spinning further than 90 degrees
+        SmartDashboard.putNumber("[Swerve]turn encoder" + moduleNumber, currentAngle);
+
+        @SuppressWarnings("deprecation")
+        SwerveModuleState state = SwerveModuleState.optimize(desiredState, new Rotation2d(currentAngle));
+
+        SmartDashboard.putNumber("[Swerve]After Optimize angle target degrees " + moduleNumber,
+                state.angle.getDegrees());
+        // KB Not being used right now might go back into use later
+        // final double driveOutput =
+        // drivingPidController.calculate(m_driveEncoder.getVelocity(),
+        // state.speedMetersPerSecond);
+
+        double currentDivergence = Math.abs(Rotation2d.fromRadians(state.angle.getRadians())
+                .minus(Rotation2d.fromRadians(currentAngle)).getRadians());
+        if (currentDivergence > ANGLE_DIVERGENCE_TOLERANCE && angleDivergenceStartTime == -1) {
+            angleDivergenceStartTime = System.currentTimeMillis();
+        } else if (currentDivergence <= ANGLE_DIVERGENCE_TOLERANCE) {
+            angleDivergenceStartTime = -1;
+            angleCorrectionStartTime = -1;
+        }
+        boolean stuck = angleDivergenceStartTime != -1
+                && System.currentTimeMillis() - angleDivergenceStartTime > ANGLE_STUCK_TIME_THRESHOLD_MS;
+        if (stuck && angleCorrectionStartTime == -1) {
+            angleCorrectionStartTime = System.currentTimeMillis();
+        }
+        SmartDashboard.putBoolean("[Swerve] stuck detector " + moduleNumber, stuck);
+        if (STUCK_PROTECTION_ENABLED && stuck) {
+            // if stuck, turn 90 degrees away from where we were trying to turn
+            state.angle = Rotation2d
+                    .fromRadians(currentAngle + (currentAngle > state.angle.getRadians() ? 1.0 : -1.0) * Math.PI / 2.0);
+            state.speedMetersPerSecond = 0.0;
+            if (System.currentTimeMillis() - angleCorrectionStartTime > ANGLE_CORRECTION_TIME_THRESHOLD_MS) {
+                // reset the timer so we don't keep doing this.. may need to adjust this in the
+                // future
+                angleDivergenceStartTime = -1;
+                angleCorrectionStartTime = -1;
+            }
+        }
+
+        final double turnOutput = turningPidController.calculate(currentAngle, state.angle.getRadians());
+        // final double turnOutput = Math.min (Math.max
+        // (turningPidController.calculate(encoderValue(), state.angle.getRadians());
+        // SmartDashboard.putNumber("[Swerve]pid " + moduleNumber, turnOutput);
+
+        SmartDashboard.putNumber("[Swerve]Setpoint velocity", turningPidController.getSetpoint().velocity);
+
+        final double driveOutput = m_drivePIDController.calculate(
+                currentSpeedPercentage,
+                state.speedMetersPerSecond) * state.angle.minus(Rotation2d.fromRadians(currentAngle)).getCos();
+        driveMotor.set(driveOutput);
+
+        angleMotor.set((turnOutput / Math.PI));
+
+        SmartDashboard.putNumber("[Swerve]m_driveMotor set " + moduleNumber,
+                driveOutput);
+        SmartDashboard.putNumber("[Swerve]m_turningMotor set " + moduleNumber,
+                turnOutput / SwerveConstants.kModuleMaxAngularVelocity);
+
+        SmartDashboard.putNumber("[Swerve]m_driveMotor actual" + moduleNumber, getConvertedVelocity());
+        SmartDashboard.putNumber("[Swerve]m_driveMotor velocity" + moduleNumber, currentSpeedPercentage);
+        SmartDashboard.putNumber("[Swerve]m_driveMotor get" + moduleNumber, driveMotor.get());
+        SmartDashboard.putNumber("[Swerve]m_turningMotor actual" + moduleNumber, angleMotor.get());
+
+        SmartDashboard.putNumber("[Swerve]drive encoder" + moduleNumber, m_driveEncoder.getPosition());
+        SmartDashboard.putNumber("[Swerve]turn encoder" + moduleNumber, currentAngle);
+
+        SmartDashboard.putNumber("[Swerve]turnOutput", turnOutput);
+        // SmartDashboard.putNumber("[Swerve]Drive", ((driveOutput + driveFeedforward)
+        // /2.1) /2);
+        // SmartDashboard.putNumber("[Swerve]Turning stuff", Math.max(turnOutput,
+        // turnFeedforward));
+        // SmartDashboard.putNumber("[Swerve]Turning stuff", turnOutput +
+        // turnFeedforward);
+        SmartDashboard.putNumber("[Swerve]target " + moduleNumber, state.angle.getRadians());
+    }
+}
