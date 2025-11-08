@@ -14,25 +14,13 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.JoystickConstants;
-import frc.robot.commands.algea.EXO.OzDown;
-import frc.robot.commands.algea.EXO.OzUp;
 import frc.robot.commands.auto.AutoCommandFactory;
-import frc.robot.commands.coral.lili.AUTOCoral;
-import frc.robot.commands.coral.lili.AUTOCoralFalse;
-import frc.robot.commands.coral.lili.EXOCloseGate;
-import frc.robot.commands.coral.lili.EXOCloseGateSlow;
-import frc.robot.commands.coral.lili.LIPlaceCoral;
-import frc.robot.commands.coral.lili.LIPlaceCoralSlow;
-import frc.robot.commands.coral.lili.LiAutoPlaceCoral;
 import frc.robot.commands.driving.AlineWheels;
 import frc.robot.commands.driving.Spin180;
 import frc.robot.commands.driving.Stop;
 import frc.robot.commands.driving.TeleopSwerve;
 import frc.robot.commands.driving.TimedTestDrive;
 import frc.robot.subsystems.Lidar;
-import frc.robot.subsystems.LiliCoralSubystem;
-import frc.robot.subsystems.NickClimbingSubsystem;
-import frc.robot.subsystems.OzzyGrabberSubsystem;
 import frc.robot.subsystems.drivetrainIOLayers.DrivetrainIO;
 import frc.robot.subsystems.Vision;
 
@@ -59,7 +47,6 @@ public class RobotContainer {
   /* Controllers */
   private final Joystick driver = new Joystick(0);
   private final Joystick operator = new Joystick(1);
-  private final Joystick climber = new Joystick(2);
   @SuppressWarnings("unused")
   private final Joystick testing = new Joystick(3);
 
@@ -75,9 +62,6 @@ public class RobotContainer {
 
   /* Subsystems */
   private final DrivetrainIO D = new DrivetrainIO();
-  private final LiliCoralSubystem c = new LiliCoralSubystem();
-  private final NickClimbingSubsystem nc = new NickClimbingSubsystem();
-  private final OzzyGrabberSubsystem g = new OzzyGrabberSubsystem();
   private final Vision V = new Vision();
   // private final Lidar lidar = new Lidar();
 
@@ -86,16 +70,11 @@ public class RobotContainer {
   public RobotContainer() {
     lc = initializeLaserCan();
 
-    NamedCommands.registerCommand("Drop Coral", new LiAutoPlaceCoral(c));
-    NamedCommands.registerCommand("Drop and Close Coral", new LIPlaceCoralSlow(c));
-    NamedCommands.registerCommand("Close Door", new EXOCloseGate(c));
-    NamedCommands.registerCommand("Is there Coral", new AUTOCoral(c));
-    NamedCommands.registerCommand("Is there not Coral", new AUTOCoralFalse(c));
     NamedCommands.registerCommand("Wheels", new AlineWheels(D));
     NamedCommands.registerCommand("Stop", new Stop(D));
 
     // PathplannerautoChoosers = AutoBuilder.buildAutoChooser();
-    autoChooser = new AutoCommandFactory(D, lc, c).generateAutoOptions();
+    autoChooser = new AutoCommandFactory(D, lc).generateAutoOptions();
     SmartDashboard.putData("[Robot]Auto Chosers", autoChooser);
 
     SmartDashboard.putData("[Robot]Vision Pose Estimate", visionPoseEstimate);
@@ -130,31 +109,11 @@ public class RobotContainer {
             () -> driver.getPOV()));
     new JoystickButton(driver, RED_BUTTON)
         .onTrue(new Spin180(D).asProxy());
-    /* Operator Controls */
-    new JoystickButton(operator, JoystickConstants.BLUE_BUTTON)
-        .onTrue(new LIPlaceCoral(c));
-    new JoystickButton(operator, JoystickConstants.GREEN_BUTTON)
-        .whileTrue(new OzDown(g));
-    new JoystickButton(operator, YELLOW_BUTTON)
-        .whileTrue(new OzUp(g));
-
-    /* driver */
-
-    new JoystickButton(driver, BLUE_BUTTON)
-        .onTrue(new EXOCloseGateSlow(c));
-
-    // new JoystickButton(driver, YELLOW_BUTTON)
-    // .onTrue(new DropOne(D, lc, c, START_TO_REEF_FRONT_LEFT));
-
-    // new JoystickButton(driver, GREEN_BUTTON)
-    // .onTrue(new TimedTestDrive(D, 2000, 0.5));
-    // new DriveToLocation(D, lc,
-    // new PathContainer()
-    // .addWaypoint(new Pose2d(7.5, 5.5, Rotation2d.fromDegrees(45)))
-    // // .addWaypoint(new Pose2d(7.5, 3.5, Rotation2d.fromDegrees(-45)))
-    // .addWaypoint(new Pose2d(5.721, 4.0259, Rotation2d.fromDegrees(90)), 0.23)));
 
     System.out.println("Ended configureBindings()");
+  }
+
+  public void teleopPeriodic() {
   }
 
   public void Periodic() {
@@ -164,39 +123,6 @@ public class RobotContainer {
     if (laserMeasure != null) {
       SmartDashboard.putNumber("LaserCan Distance", laserMeasure.distance_mm / 1000.0);
     }
-  }
-
-  public void teleopPeriodic() {
-    if (operator.getRawButton(LEFT_BUMPER)) {
-      g.intakePulse();
-    } else if (operator.getRawButton(RIGHT_BUMPER)) {
-      g.outake();
-    } else {
-      g.stop();
-    }
-    c.JoyControll(operator.getRawAxis(JoystickConstants.LEFT_Y_AXIS) * .25);
-    // g.joy(MathUtil.applyDeadband(operator.getRawAxis(JoystickConstants.LEFT_Y_AXIS),
-    // 0.5) * 1);
-    // g.joy1(MathUtil.applyDeadband(climber.getRawAxis(JoystickConstants.LEFT_Y_AXIS),
-    // 0.2));
-    if (climber.getRawButton(GREEN_BUTTON)) {
-      nc.JoyClimb1(-1, false);
-      nc.JoyClimb2(-1, false);
-    } else {
-      nc.JoyClimb1(MathUtil.applyDeadband(climber.getRawAxis(JoystickConstants.RIGHT_Y_AXIS), 0.5),
-          climber.getRawButton(JoystickConstants.START_BUTTON));
-      nc.JoyClimb2(MathUtil.applyDeadband(climber.getRawAxis(JoystickConstants.LEFT_Y_AXIS), 0.5),
-          climber.getRawButton(JoystickConstants.BACK_BUTTON));
-    }
-
-    if (climber.getPOV() == 0) {
-      nc.Flipper(-1);
-    } else if (climber.getPOV() == 180) {
-      nc.Flipper(1);
-    } else {
-      nc.Flipper(0);
-    }
-
   }
 
   private void updateVisionEst() {

@@ -60,8 +60,6 @@ public class Vision extends SubsystemBase {
 
     private final List<PhotonDataContainer> photonDataContainers;
 
-    private final PhotonCamera algaeCamera;
-
     // Simulation
     private PhotonCameraSim cameraSim;
     private VisionSystemSim visionSim;
@@ -81,9 +79,6 @@ public class Vision extends SubsystemBase {
 
         photonDataContainers = List.of(new PhotonDataContainer(tagCamera, photonEstimator),
                 new PhotonDataContainer(tagCameraColor, photonEstimatorColor));
-
-        algaeCamera = new PhotonCamera(kAlgaeCameraName);
-        algaeCamera.setPipelineIndex(0);
 
         // ----- Simulation
         if (Robot.isSimulation()) {
@@ -112,10 +107,6 @@ public class Vision extends SubsystemBase {
 
             cameraSim.enableDrawWireframe(true);
         }
-    }
-
-    public PhotonTrackedTarget getAlgaeTarget() {
-        return algaeCamera.getLatestResult().hasTargets() ? algaeCamera.getLatestResult().getBestTarget() : null;
     }
 
     /**

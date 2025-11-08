@@ -17,95 +17,80 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
-import frc.robot.commands.coral.lili.AUTOCoral;
-import frc.robot.commands.coral.lili.LIPlaceCoral;
 import frc.robot.commands.driving.DriveToLocation;
 import frc.robot.model.PathContainer;
-import frc.robot.subsystems.LiliCoralSubystem;
 import frc.robot.subsystems.drivetrainIOLayers.DrivetrainIO;
 
 public class AutoCommandFactory {
 
-    private static final boolean USE_CORAL = true;
-
-    private final LiliCoralSubystem coralSubystem;
     private final DrivetrainIO drivetrainIO;
     private final LaserCan laserCan;
 
-    public AutoCommandFactory(DrivetrainIO drivetrainIO, LaserCan laserCan, LiliCoralSubystem coralSubystem) {
+    public AutoCommandFactory(DrivetrainIO drivetrainIO, LaserCan laserCan) {
         this.drivetrainIO = drivetrainIO;
         this.laserCan = laserCan;
-        this.coralSubystem = coralSubystem;
     }
 
     private Command dropOneCenter() {
-        return new SequentialCommandGroup(new WaitCommand(3), drive(START_TO_REEF_FRONT), placeCoral());
+        return new SequentialCommandGroup(new WaitCommand(3), drive(START_TO_REEF_FRONT));
     }
 
     private Command dropOneLeft() {
-        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT_LEFT), placeCoral());
+        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT_LEFT));
     }
 
     private Command dropOneRight() {
-        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT_RIGHT), placeCoral());
+        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT_RIGHT));
     }
 
     private Command dropTwoFrontCenterBackLeft() {
-        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT), placeCoral(), drive(REEF_FRONT_TO_STATION_LEFT),
-                pickupCoral(), drive(STATION_LEFT_TO_REEF_BACK_LEFT), placeCoral(),
-                drive(REEF_BACK_ANY_TO_STATION_LEFT), pickupCoral());
+        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT), drive(REEF_FRONT_TO_STATION_LEFT),
+                drive(STATION_LEFT_TO_REEF_BACK_LEFT),
+                drive(REEF_BACK_ANY_TO_STATION_LEFT));
     }
 
     private Command dropTwoFrontCenterBackCenterLeftStation() {
-        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT), placeCoral(), drive(REEF_FRONT_TO_STATION_LEFT),
-                pickupCoral(), drive(STATION_ANY_TO_REEF_BACK_CENTER), placeCoral());
+        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT), drive(REEF_FRONT_TO_STATION_LEFT),
+                drive(STATION_ANY_TO_REEF_BACK_CENTER));
     }
 
     private Command dropTwoFrontLeftBackLeft() {
-        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT_LEFT), placeCoral(),
+        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT_LEFT),
                 drive(REEF_LEFT_TO_STATION_LEFT),
-                pickupCoral(), drive(STATION_LEFT_TO_REEF_BACK_LEFT), placeCoral(),
-                drive(REEF_BACK_ANY_TO_STATION_LEFT), pickupCoral());
+                drive(STATION_LEFT_TO_REEF_BACK_LEFT),
+                drive(REEF_BACK_ANY_TO_STATION_LEFT));
     }
 
     private Command dropTwoFrontLeftBackCenter() {
-        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT_LEFT), placeCoral(),
+        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT_LEFT),
                 drive(REEF_LEFT_TO_STATION_LEFT),
-                pickupCoral(), drive(STATION_ANY_TO_REEF_BACK_CENTER), placeCoral());
+                drive(STATION_ANY_TO_REEF_BACK_CENTER));
     }
 
     private Command dropTwoFrontCenterBackRight() {
-        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT), placeCoral(), drive(REEF_FRONT_TO_STATION_RIGHT),
-                pickupCoral(), drive(STATION_RIGHT_TO_REEF_BACK_RIGHT), placeCoral());
+        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT), drive(REEF_FRONT_TO_STATION_RIGHT),
+                drive(STATION_RIGHT_TO_REEF_BACK_RIGHT));
     }
 
     private Command dropTwoFrontCenterBackCenterRightStation() {
-        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT), placeCoral(), drive(REEF_FRONT_TO_STATION_RIGHT),
-                pickupCoral(), drive(STATION_ANY_TO_REEF_BACK_CENTER), placeCoral());
+        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT), drive(REEF_FRONT_TO_STATION_RIGHT),
+                drive(STATION_ANY_TO_REEF_BACK_CENTER));
     }
 
     private Command dropTwoFrontRightBackRight() {
-        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT_RIGHT), placeCoral(),
+        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT_RIGHT),
                 drive(REEF_RIGHT_TO_STATION_RIGHT),
-                pickupCoral(), drive(STATION_RIGHT_TO_REEF_BACK_RIGHT), placeCoral());
+                drive(STATION_RIGHT_TO_REEF_BACK_RIGHT));
     }
 
     private Command dropTwoFrontRightBackCenter() {
-        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT_RIGHT), placeCoral(),
+        return new SequentialCommandGroup(drive(START_TO_REEF_FRONT_RIGHT),
                 drive(REEF_RIGHT_TO_STATION_RIGHT),
-                pickupCoral(), drive(STATION_ANY_TO_REEF_BACK_CENTER), placeCoral());
+                drive(STATION_ANY_TO_REEF_BACK_CENTER));
     }
 
     private Command drive(PathContainer path) {
         return new DriveToLocation(drivetrainIO, laserCan, path);
-    }
-
-    private Command placeCoral() {
-        return USE_CORAL ? new LIPlaceCoral(coralSubystem) : new WaitCommand(1);
-    }
-
-    private Command pickupCoral() {
-        return USE_CORAL ? new AUTOCoral(coralSubystem) : new WaitCommand(1);
     }
 
     public SendableChooser<Command> generateAutoOptions() {

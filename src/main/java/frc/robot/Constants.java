@@ -152,9 +152,6 @@ public final class Constants {
         }
 
         public static final class Vision {
-                public static final String kTagCameraName = "Arducam1";
-                public static final String kTagCameraColorName = "Arducam IMX179 Camera Module";
-                public static final String kAlgaeCameraName = "ArducamColor";
                 public static final AprilTagFieldLayout kTagLayout = AprilTagFields.k2025ReefscapeWelded
                                 .loadAprilTagLayoutField();
 
@@ -170,14 +167,6 @@ public final class Constants {
                 // (Fake values. Experiment and determine estimation noise on an actual robot.)
                 public static final Matrix<N3, N1> kSingleTagStdDevs = VecBuilder.fill(4, 4, 8);
                 public static final Matrix<N3, N1> kMultiTagStdDevs = VecBuilder.fill(0.5, 0.5, 1);
-
-                private static final int ALGAE_CAM_WIDTH = 1200;
-                private static final int ALGAE_CAM_HEIGHT = 800;
-                public static final int ALGAE_CAM_AREA = ALGAE_CAM_HEIGHT * ALGAE_CAM_WIDTH;
-
-                public static final double ALGAE_CAM_FOCAL_LENGTH = 70;
-
-                public static final double ALGAE_REAL_DIAMETER = Units.inchesToMeters(16.25); // meters
         }
 
         public static final class FieldConstants {
