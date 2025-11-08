@@ -21,6 +21,8 @@ import frc.robot.Constants.SwerveConstants.Mod0;
 import frc.robot.Constants.SwerveConstants.Mod1;
 import frc.robot.Constants.SwerveConstants.Mod2;
 import frc.robot.Constants.SwerveConstants.Mod3;
+import frc.robot.model.MetricName;
+import frc.robot.service.MetricService;
 
 import static frc.robot.Constants.SwerveConstants.*;
 
@@ -145,6 +147,7 @@ public class DrivetrainIO extends SubsystemBase {
     SmartDashboard.putNumber("[Drivetrain]drive rot", rot + Rotate_Rot);
     SmartDashboard.putNumber("[Drivetrain]drive xSpeed", xSpeed);
     SmartDashboard.putNumber("[Drivetrain]drive ySpeed", ySpeed);
+    MetricService.publish(MetricName.REQUESTED_SPEED_X, xSpeed);
     xSpeed_cur = xSpeed;
     ySpeed_cur = ySpeed;
     rot_cur = rot + Rotate_Rot;
@@ -190,8 +193,8 @@ public class DrivetrainIO extends SubsystemBase {
     // note: docs say gyro should increase counterclockwise. ours decreases. may
     // need to look into this.
     // gyro.setAngleAdjustment(CoordinateConverter.convertToAllianceRotation(Rotation2d.fromDegrees(-90)).getDegrees());
-    gyro.setAngleAdjustment(DriverStation.getAlliance().get() == Alliance.Red ? 
-      Rotation2d.fromDegrees(-90).getDegrees() : Rotation2d.fromDegrees(-90).getDegrees());
+    gyro.setAngleAdjustment(DriverStation.getAlliance().get() == Alliance.Red ? Rotation2d.fromDegrees(-90).getDegrees()
+        : Rotation2d.fromDegrees(-90).getDegrees());
     SmartDashboard.putString("[Drivetrain]Gyro has been reset", java.time.LocalTime.now().toString());
     System.out.println("Gyro has been reset");
   }
@@ -218,7 +221,7 @@ public class DrivetrainIO extends SubsystemBase {
   // // Configure AutoBuilder last
   // AutoBuilder.configure(
   // this::getPose, // Robot pose supplier
-  // this::resetPose, // Method to reset odometry (will be called if your auto 
+  // this::resetPose, // Method to reset odometry (will be called if your auto
   // hasa starting pose)
   // this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT
   // RELATIVE

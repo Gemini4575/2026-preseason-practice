@@ -58,12 +58,19 @@ public class RobotContainer {
 
   /* Subsystems */
   private final DrivetrainIO D = new DrivetrainIO();
-  private final Vision V = new Vision();
+  private Vision V;
   // private final Lidar lidar = new Lidar();
 
   private final LaserCan lc;
 
   public RobotContainer() {
+
+    // try {
+    // V = new Vision();
+    // } catch (Exception e) {
+    // System.out.println("Vision subsystem failed to initialize: " + e);
+    // }
+
     lc = initializeLaserCan();
 
     NamedCommands.registerCommand("Wheels", new AlineWheels(D));
@@ -122,6 +129,8 @@ public class RobotContainer {
   }
 
   private void updateVisionEst() {
+    if (V == null)
+      return;
     V.getEstimatedVisionPoses().forEach(estimateContainer -> {
       D.addVisionMeasurement(estimateContainer.estimatedPose().estimatedPose.toPose2d(),
           estimateContainer.estimatedPose().timestampSeconds, estimateContainer.stdDev());
