@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -122,7 +123,9 @@ public class RobotContainer {
 
   public void Periodic() {
     updateVisionEst();
-    overallPoseEstimate.setRobotPose(D.getPose());
+    Pose2d poseEstimate = D.getPose();
+    overallPoseEstimate.setRobotPose(poseEstimate);
+    MetricService.publishRobotLocation(poseEstimate);
     var laserMeasure = lc.getMeasurement();
     if (laserMeasure != null) {
       SmartDashboard.putNumber("LaserCan Distance", laserMeasure.distance_mm / 1000.0);

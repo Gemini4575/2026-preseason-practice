@@ -10,7 +10,7 @@ public class PidControllerTest {
     @Test
     public void test_pid() {
         // SimpleMotorFeedforward
-        PIDController m_drivePIDController = new PIDController(0.5, 0, 0);
+        PIDController m_drivePIDController = new PIDController(0.6, 0, 0);
         double measurement = 0.6;
         for (int i = 0; i < 10; i++) {
             double setpoint = 1.0;

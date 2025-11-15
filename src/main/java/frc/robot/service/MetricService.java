@@ -4,17 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.wpi.first.math.Pair;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.networktables.StringArrayPublisher;
 import edu.wpi.first.networktables.StringArrayTopic;
+import frc.robot.model.MetricData;
 import frc.robot.model.MetricName;
 
 public class MetricService {
 
     private static final int MAX_CACHE_SIZE = 5000;
-    private static List<Pair<MetricName, Double>> capturedMetrics = new ArrayList<>();
+    private static List<MetricData> capturedMetrics = new ArrayList<>();
     private static StringArrayPublisher jsonPublisher;
 
     public static void init() {
@@ -32,13 +34,25 @@ public class MetricService {
     }
 
     public static void publish(MetricName metricName, double value) {
+        publish(metricName, String.valueOf(value));
+    }
+
+    public static void publish(MetricName metricName, String value) {
         if (capturedMetrics.size() < MAX_CACHE_SIZE) {
-            capturedMetrics.add(new Pair<>(metricName, value));
+            capturedMetrics.add(new MetricData(metricName, value, System.currentTimeMillis()));
         }
     }
 
-    private static String toJson(MetricName metricName, double value) {
-        return String.format("{\"metricName\": \"%s\", \"type\": \"double\", \"value\": %f}", metricName, value);
+    public static void publishRobotLocation(Pose2d location) {
+        String value = String.format("%f;%f;%f",
+                location.getX(), location.getY(), location.getRotation().getRadians());
+        publish(MetricName.LOCATION_ESTIMATE, value);
+    }
+
+    private static String toJson(MetricData metricData) {
+        return String.format("{\"metricName\": \"%s\", \"type\": \"double\", \"value\": \"%s\", \"timestamp\": %d}",
+                metricData.metricName(),
+                metricData.value(), metricData.timestamp());
     }
 
     public static void periodic() {
@@ -50,7 +64,7 @@ public class MetricService {
         if (jsonPublisher != null) {
             // System.out.println("Publishing metric: " + metricName + " = " + value);
             jsonPublisher
-                    .set(previousList.stream().map(v -> toJson(v.getFirst(), v.getSecond())).toArray(String[]::new));
+                    .set(previousList.stream().map(MetricService::toJson).toArray(String[]::new));
         }
     }
 

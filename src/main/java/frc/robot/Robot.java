@@ -8,6 +8,7 @@ import au.grapplerobotics.CanBridge;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.model.MetricName;
 import frc.robot.service.MetricService;
 
 /**
@@ -69,6 +70,13 @@ public class Robot extends TimedRobot {
   /** This function is called once each time the robot enters Disabled mode. */
   @Override
   public void disabledInit() {
+    MetricService.publish(MetricName.DISABLED_STATE, 1.0);
+  }
+
+  @Override
+  public void disabledExit() {
+    super.disabledExit();
+    MetricService.publish(MetricName.DISABLED_STATE, 0.0);
   }
 
   @Override
@@ -82,6 +90,7 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousInit() {
     if (m_robotContainer != null) {
+      MetricService.publish(MetricName.AUTO_STATE, 1.0);
       m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
       // schedule the autonomous command (example)
@@ -93,6 +102,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void autonomousExit() {
+    MetricService.publish(MetricName.AUTO_STATE, 0.0);
     super.autonomousExit();
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
@@ -106,6 +116,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopInit() {
+    MetricService.publish(MetricName.TELEOP_STATE, 1.0);
     // This makes sure that the autonomous stops running when
     // teleop starts running. If you want the autonomous to
     // continue until interrupted by another command, remove
@@ -113,6 +124,12 @@ public class Robot extends TimedRobot {
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
+  }
+
+  @Override
+  public void teleopExit() {
+    super.teleopExit();
+    MetricService.publish(MetricName.TELEOP_STATE, 0.0);
   }
 
   /** This function is called periodically during operator control. */

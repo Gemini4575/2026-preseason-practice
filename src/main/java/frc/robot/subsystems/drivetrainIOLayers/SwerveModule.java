@@ -49,7 +49,7 @@ public class SwerveModule extends SubsystemBase {
     // SwerveConstants.MaxMetersPersecond,
     // SwerveConstants.kMaxAceceration));
 
-    private final PIDController m_drivePIDController = new PIDController(1.6, 0, 0.05);
+    private final PIDController m_drivePIDController = new PIDController(0.75, 0, 0);
 
     private SparkMax driveMotor;
     private SparkMax angleMotor;
@@ -239,7 +239,7 @@ public class SwerveModule extends SubsystemBase {
 
         SmartDashboard.putNumber("[Swerve]Setpoint velocity", turningPidController.getSetpoint().velocity);
 
-        final double driveOutput = m_drivePIDController.calculate(
+        final double driveOutput = currentSpeedPercentage + m_drivePIDController.calculate(
                 currentSpeedPercentage,
                 state.speedMetersPerSecond) * state.angle.minus(Rotation2d.fromRadians(currentAngle)).getCos();
         driveMotor.set(driveOutput);

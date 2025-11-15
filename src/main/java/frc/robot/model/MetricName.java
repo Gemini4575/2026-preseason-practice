@@ -1,6 +1,13 @@
 package frc.robot.model;
 
 public enum MetricName {
+
+    // robot data
+    LOCATION_ESTIMATE,
+    AUTO_STATE,
+    TELEOP_STATE,
+    DISABLED_STATE,
+
     // overall drivetrain metrics
     REQUESTED_SPEED_X,
     REQUESTED_SPEED_Y,
