@@ -17,6 +17,7 @@ import frc.robot.commands.driving.AlineWheels;
 import frc.robot.commands.driving.Spin180;
 import frc.robot.commands.driving.Stop;
 import frc.robot.commands.driving.TeleopSwerve;
+import frc.robot.service.MetricService;
 import frc.robot.subsystems.drivetrainIOLayers.DrivetrainIO;
 import frc.robot.subsystems.Vision;
 
@@ -126,6 +127,7 @@ public class RobotContainer {
     if (laserMeasure != null) {
       SmartDashboard.putNumber("LaserCan Distance", laserMeasure.distance_mm / 1000.0);
     }
+    MetricService.periodic();
   }
 
   private void updateVisionEst() {

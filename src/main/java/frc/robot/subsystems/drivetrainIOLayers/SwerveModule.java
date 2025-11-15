@@ -185,6 +185,7 @@ public class SwerveModule extends SubsystemBase {
         double currentSpeedPercentage = getCurrentSpeedAsPercentage();
         double currentAngle = encoderValue();
         MetricService.publish(MetricName.currentAngle(moduleNumber), currentAngle);
+        MetricService.publish(MetricName.actualVelocity(moduleNumber), currentSpeedPercentage);
 
         SmartDashboard.putNumber("Speed " + moduleNumber, currentSpeedPercentage);
         SmartDashboard.putNumber("[Swerve]Pre Optimize angle target degrees " + moduleNumber,
