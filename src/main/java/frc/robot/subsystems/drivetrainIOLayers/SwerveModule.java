@@ -25,6 +25,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.math.SwerveModuleConstants;
 import frc.robot.Constants.SwerveConstants;
+import frc.robot.model.MetricName;
+import frc.robot.service.MetricService;
 
 public class SwerveModule extends SubsystemBase {
 
@@ -182,6 +184,7 @@ public class SwerveModule extends SubsystemBase {
     public void SetDesiredState(SwerveModuleState desiredState) {
         double currentSpeedPercentage = getCurrentSpeedAsPercentage();
         double currentAngle = encoderValue();
+        MetricService.publish(MetricName.currentAngle(moduleNumber), currentAngle);
 
         SmartDashboard.putNumber("Speed " + moduleNumber, currentSpeedPercentage);
         SmartDashboard.putNumber("[Swerve]Pre Optimize angle target degrees " + moduleNumber,
@@ -198,6 +201,8 @@ public class SwerveModule extends SubsystemBase {
         // final double driveOutput =
         // drivingPidController.calculate(m_driveEncoder.getVelocity(),
         // state.speedMetersPerSecond);
+        MetricService.publish(MetricName.reqSpeed(moduleNumber), state.speedMetersPerSecond);
+        MetricService.publish(MetricName.reqTurn(moduleNumber), state.angle.getRadians());
 
         double currentDivergence = Math.abs(Rotation2d.fromRadians(state.angle.getRadians())
                 .minus(Rotation2d.fromRadians(currentAngle)).getRadians());
@@ -239,6 +244,9 @@ public class SwerveModule extends SubsystemBase {
         driveMotor.set(driveOutput);
 
         angleMotor.set((turnOutput / Math.PI));
+
+        MetricService.publish(MetricName.commandedSpeed(moduleNumber), driveOutput);
+        MetricService.publish(MetricName.commandedTurn(moduleNumber), (turnOutput / Math.PI));
 
         SmartDashboard.putNumber("[Swerve]m_driveMotor set " + moduleNumber,
                 driveOutput);

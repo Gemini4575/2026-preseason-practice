@@ -148,6 +148,8 @@ public class DrivetrainIO extends SubsystemBase {
     SmartDashboard.putNumber("[Drivetrain]drive xSpeed", xSpeed);
     SmartDashboard.putNumber("[Drivetrain]drive ySpeed", ySpeed);
     MetricService.publish(MetricName.REQUESTED_SPEED_X, xSpeed);
+    MetricService.publish(MetricName.REQUESTED_SPEED_Y, ySpeed);
+    MetricService.publish(MetricName.REQUESTED_ROTATION, rot);
     xSpeed_cur = xSpeed;
     ySpeed_cur = ySpeed;
     rot_cur = rot + Rotate_Rot;

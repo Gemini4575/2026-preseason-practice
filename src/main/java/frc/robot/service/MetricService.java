@@ -27,7 +27,7 @@ public class MetricService {
 
     public static void publish(MetricName metricName, double value) {
         if (jsonPublisher != null) {
-            System.out.println("Publishing metric: " + metricName + " = " + value);
+            // System.out.println("Publishing metric: " + metricName + " = " + value);
             jsonPublisher.set(toJson(metricName, value));
         }
     }
