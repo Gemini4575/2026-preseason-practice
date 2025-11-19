@@ -29,7 +29,7 @@ public class TimedTestDrive extends Command {
 
     @Override
     public void execute() {
-        driveTrain.drive(-speed, 0, 0, true);
+        driveTrain.drive(-speed, 0, 0, false);
         SmartDashboard.putNumber("[TimedTestDrive] drive time", System.currentTimeMillis() - startTime);
         SmartDashboard.putNumber("[TimedTestDrive] estimated distance",
                 initialPose.getTranslation().getDistance(driveTrain.getPose().getTranslation()));

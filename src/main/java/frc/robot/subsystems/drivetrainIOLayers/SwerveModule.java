@@ -103,6 +103,9 @@ public class SwerveModule extends SubsystemBase {
         if (RobotState.isTest()) {
             SmartDashboard.putNumber("[Swerve]encoder raw " + moduleNumber, getRawAngle());
         }
+        if (RobotState.isEnabled()) {
+            MetricService.publish(MetricName.driveEncoderValue(moduleNumber), m_driveEncoder.getPosition());
+        }
     }
 
     private double encoderValue() {
