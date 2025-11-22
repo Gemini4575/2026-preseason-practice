@@ -27,6 +27,7 @@ public class DriveToLocation extends Command {
     private static final double DRIVE_PRECISION = 0.05; // meters
     private static final double LASER_DRIVING_STUCK_THRESHOLD = 0.5; // meters
 
+    private final boolean enableVisionCorrection = false;
     private static final int VISION_DELAY_TOLERANCE = 50000; // milliseconds - dont use for now
     private static final double VISION_CORRECTION = 0.2; // multiplier for time driven without vision vs time with
                                                          // vision
@@ -116,7 +117,8 @@ public class DriveToLocation extends Command {
                 }
             }
 
-            if (!startedDrivingWithoutVision && isDistanceCloseEnough(distanceFromTarget.getFirst())
+            if (enableVisionCorrection && !startedDrivingWithoutVision
+                    && isDistanceCloseEnough(distanceFromTarget.getFirst())
                     && driveSubsystem.visionUpdateDelayMillis() > VISION_DELAY_TOLERANCE) {
                 // we reached close enough to target, but vision is lost
                 startedDrivingWithoutVision = true;

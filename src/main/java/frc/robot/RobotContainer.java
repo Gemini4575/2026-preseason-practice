@@ -11,15 +11,20 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.commands.auto.AutoCommandFactory;
 import frc.robot.commands.driving.AlineWheels;
+import frc.robot.commands.driving.DriveToLocation;
+import frc.robot.commands.driving.ResetLocationCommand;
 import frc.robot.commands.driving.Spin180;
 import frc.robot.commands.driving.Stop;
 import frc.robot.commands.driving.TeleopSwerve;
 import frc.robot.commands.driving.TimedTestDrive;
 import frc.robot.commands.driving.TimedTestWheelTurn;
+import frc.robot.model.PathContainer;
 import frc.robot.service.MetricService;
 import frc.robot.subsystems.drivetrainIOLayers.DrivetrainIO;
 import frc.robot.subsystems.Vision;
@@ -118,7 +123,15 @@ public class RobotContainer {
         .onTrue(new Spin180(D).asProxy());
 
     new JoystickButton(driver, YELLOW_BUTTON).onTrue(new TimedTestDrive(D, 2000, 0.5));
-    new JoystickButton(driver, GREEN_BUTTON).onTrue(new TimedTestWheelTurn(D, 5000));
+    // new JoystickButton(driver, GREEN_BUTTON).onTrue(new TimedTestWheelTurn(D,
+    // 5000));
+
+    new JoystickButton(driver, GREEN_BUTTON)
+        .onTrue(new SequentialCommandGroup(new ResetLocationCommand(D, Pose2d.kZero),
+            new WaitCommand(5),
+            new DriveToLocation(D, lc,
+                new PathContainer().addWaypoint(new Pose2d(0.5, 0,
+                    Pose2d.kZero.getRotation())))));
 
     System.out.println("Ended configureBindings()");
   }
