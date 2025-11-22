@@ -39,7 +39,7 @@ public class TimedTestWheelTurn extends Command {
     }
 
     private SwerveModuleState generateTargetState() {
-        return new SwerveModuleState(0, Rotation2d.fromDegrees(positiveTurnDirection ? 45 : 0));
+        return new SwerveModuleState(0, Rotation2d.fromDegrees(positiveTurnDirection ? 89 : 0));
     }
 
     @Override

@@ -117,7 +117,7 @@ public class RobotContainer {
     new JoystickButton(driver, RED_BUTTON)
         .onTrue(new Spin180(D).asProxy());
 
-    new JoystickButton(driver, YELLOW_BUTTON).onTrue(new TimedTestDrive(D, 5000, 0.5));
+    new JoystickButton(driver, YELLOW_BUTTON).onTrue(new TimedTestDrive(D, 2000, 0.5));
     new JoystickButton(driver, GREEN_BUTTON).onTrue(new TimedTestWheelTurn(D, 5000));
 
     System.out.println("Ended configureBindings()");

@@ -16,11 +16,9 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.RobotState;
@@ -36,13 +34,14 @@ public class SwerveModule extends SubsystemBase {
 
     private static final double DISTANCE_CORRECTION_FACTOR = 0.97;
 
-    private ProfiledPIDController turningPidController = new ProfiledPIDController(
-            3.1, // Proportional gain
-            0.0, // Integral gain
-            0.01,
-            new TrapezoidProfile.Constraints(
-                    SwerveConstants.kModuleMaxAngularVelocity,
-                    SwerveConstants.kModuleMaxAngularAcceleration));
+    private PIDController turningPidController = new PIDController(3, 0.1, 0);
+    // new ProfiledPIDController(
+    // 3.1, // Proportional gain
+    // 0.0, // Integral gain
+    // 0.01,
+    // new TrapezoidProfile.Constraints(
+    // SwerveConstants.kModuleMaxAngularVelocity,
+    // SwerveConstants.kModuleMaxAngularAcceleration));
     // KB not being used right now might go back into use later
     // private ProfiledPIDController drivingPidController = new
     // ProfiledPIDController(
@@ -53,7 +52,7 @@ public class SwerveModule extends SubsystemBase {
     // SwerveConstants.MaxMetersPersecond,
     // SwerveConstants.kMaxAceceration));
 
-    private final PIDController m_drivePIDController = new PIDController(0.75, 0.75, 0);
+    private final PIDController m_drivePIDController;
 
     private SparkMax driveMotor;
     private SparkMax angleMotor;
@@ -103,10 +102,15 @@ public class SwerveModule extends SubsystemBase {
 
         captureConfig();
 
+        m_drivePIDController = new PIDController(s.pidP, s.pidI, 0);
+
         m_drivePIDController.setIZone(0.06); // don't use ki if error is more than 6%
         // this determines the max contribution of the ki factor. we should keep it
         // close to the iZone for fine tuning
         m_drivePIDController.setIntegratorRange(-0.06, 0.06);
+
+        turningPidController.setIZone(Math.PI / 10);
+        turningPidController.setIntegratorRange(-Math.PI / 20, Math.PI / 20);
 
     }
 
@@ -252,11 +256,14 @@ public class SwerveModule extends SubsystemBase {
         // (turningPidController.calculate(encoderValue(), state.angle.getRadians());
         // SmartDashboard.putNumber("[Swerve]pid " + moduleNumber, turnOutput);
 
-        SmartDashboard.putNumber("[Swerve]Setpoint velocity", turningPidController.getSetpoint().velocity);
+        // SmartDashboard.putNumber("[Swerve]Setpoint velocity",
+        // turningPidController.getSetpoint().velocity);
 
-        final double driveOutput = currentSpeedPercentage + m_drivePIDController.calculate(
-                currentSpeedPercentage,
-                state.speedMetersPerSecond) * state.angle.minus(Rotation2d.fromRadians(currentAngle)).getCos();
+        final double driveOutput = (currentSpeedPercentage
+                + m_drivePIDController.calculate(
+                        currentSpeedPercentage,
+                        state.speedMetersPerSecond))
+                * state.angle.minus(Rotation2d.fromRadians(currentAngle)).getCos();
         driveMotor.set(driveOutput);
 
         angleMotor.set((turnOutput / Math.PI));
