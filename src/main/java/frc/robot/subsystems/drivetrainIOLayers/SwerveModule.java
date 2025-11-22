@@ -4,6 +4,9 @@ import com.revrobotics.spark.SparkMax;
 
 import static frc.robot.Constants.SwerveConstants.MOTOR_MAX_RPM;
 
+import java.io.FileWriter;
+import java.io.IOException;
+
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
@@ -24,6 +27,7 @@ import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.math.SwerveModuleConstants;
+import frc.lib.util.SparkConfigUtils;
 import frc.robot.Constants.SwerveConstants;
 import frc.robot.model.MetricName;
 import frc.robot.service.MetricService;
@@ -49,7 +53,7 @@ public class SwerveModule extends SubsystemBase {
     // SwerveConstants.MaxMetersPersecond,
     // SwerveConstants.kMaxAceceration));
 
-    private final PIDController m_drivePIDController = new PIDController(0.75, 0, 0);
+    private final PIDController m_drivePIDController = new PIDController(0.75, 0.75, 0);
 
     private SparkMax driveMotor;
     private SparkMax angleMotor;
@@ -96,6 +100,14 @@ public class SwerveModule extends SubsystemBase {
         turningPidController.enableContinuousInput(-Math.PI, Math.PI);
 
         m_driveEncoder.setPosition(0);
+
+        captureConfig();
+
+        m_drivePIDController.setIZone(0.06); // don't use ki if error is more than 6%
+        // this determines the max contribution of the ki factor. we should keep it
+        // close to the iZone for fine tuning
+        m_drivePIDController.setIntegratorRange(-0.06, 0.06);
+
     }
 
     @Override
@@ -273,5 +285,17 @@ public class SwerveModule extends SubsystemBase {
         // SmartDashboard.putNumber("[Swerve]Turning stuff", turnOutput +
         // turnFeedforward);
         SmartDashboard.putNumber("[Swerve]target " + moduleNumber, state.angle.getRadians());
+    }
+
+    private void captureConfig() {
+
+        try {
+            var logFileWriter = new FileWriter("/home/lvuser/sparkconfig_" + moduleNumber + ".txt", false);
+            logFileWriter.write("Driving motor config for module " + moduleNumber + "\n");
+            SparkConfigUtils.printConfig(driveMotor, logFileWriter);
+            logFileWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -181,7 +181,7 @@ public class DrivetrainIO extends SubsystemBase {
     setModuleStates(swerveModuleStates);
   }
 
-  private void setModuleStates(SwerveModuleState[] swerveModuleStates) {
+  public void setModuleStates(SwerveModuleState[] swerveModuleStates) {
     backLeft_0.SetDesiredState(swerveModuleStates[0]);
     backRight_1.SetDesiredState(swerveModuleStates[1]);
     frontRight_2.SetDesiredState(swerveModuleStates[2]);
