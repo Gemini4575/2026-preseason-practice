@@ -177,8 +177,16 @@ public class DrivetrainIO extends SubsystemBase {
     // swerveModuleStates[2].toString());
     // SmartDashboard.putString("[Drivetrain]module 3",
     // swerveModuleStates[3].toString());
-
-    setModuleStates(swerveModuleStates);
+    if (xSpeed + ySpeed + rot == 0) {
+      setModuleStates(new SwerveModuleState[] {
+          new SwerveModuleState(0, new Rotation2d(-45)),
+          new SwerveModuleState(0, new Rotation2d(45)),
+          new SwerveModuleState(0, new Rotation2d(-45)),
+          new SwerveModuleState(0, new Rotation2d(45)),
+      });
+    } else {
+      setModuleStates(swerveModuleStates);
+    }
   }
 
   public void setModuleStates(SwerveModuleState[] swerveModuleStates) {
@@ -186,7 +194,6 @@ public class DrivetrainIO extends SubsystemBase {
     backRight_1.SetDesiredState(swerveModuleStates[1]);
     frontRight_2.SetDesiredState(swerveModuleStates[2]);
     frontLeft_3.SetDesiredState(swerveModuleStates[3]);
-
   }
 
   public void ResetGyro() {

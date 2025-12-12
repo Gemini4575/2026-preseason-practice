@@ -30,26 +30,26 @@ public class TeleopSwerve extends Command {
     }
 
     public ChassisSpeeds dpadCalculator() {
-        switch (dpad.getAsInt()) {
-            case 0: // Up
-                return new ChassisSpeeds(0.5, 0.0, 0.0);
-            case 45: // Up-Right
-                return new ChassisSpeeds(0.5, 0.5, 0.0);
-            case 90: // Right
-                return new ChassisSpeeds(0.0, 0.5, 0.0);
-            case 135: // Down-Right
-                return new ChassisSpeeds(-0.5, 0.5, 0.0);
-            case 180: // Down
-                return new ChassisSpeeds(-0.5, 0.0, 0.0);
-            case 225: // Down-Left
-                return new ChassisSpeeds(-0.5, -0.5, 0.0);
-            case 270: // Left
-                return new ChassisSpeeds(0.0, -0.5, 0.0);
-            case 315: // Up-Left
-                return new ChassisSpeeds(0.5, -0.5, 0.0);
-            default: // D-pad not pressed
-                return new ChassisSpeeds(0.0, 0.0, 0.0);
-        }
+        return switch (dpad.getAsInt()) {
+            case 0 -> // Up
+                new ChassisSpeeds(0.5, 0.0, 0.0);
+            case 45 -> // Up-Right
+                new ChassisSpeeds(0.5, 0.5, 0.0);
+            case 90 -> // Right
+                new ChassisSpeeds(0.0, 0.5, 0.0);
+            case 135 -> // Down-Right
+                new ChassisSpeeds(-0.5, 0.5, 0.0);
+            case 180 -> // Down
+                new ChassisSpeeds(-0.5, 0.0, 0.0);
+            case 225 -> // Down-Left
+                new ChassisSpeeds(-0.5, -0.5, 0.0);
+            case 270 -> // Left
+                new ChassisSpeeds(0.0, -0.5, 0.0);
+            case 315 -> // Up-Left
+                new ChassisSpeeds(0.5, -0.5, 0.0);
+            default -> // D-pad not pressed
+                new ChassisSpeeds(0.0, 0.0, 0.0);
+        };
     }
 
     @Override
