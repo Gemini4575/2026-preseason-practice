@@ -5,7 +5,12 @@
 package frc.robot;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInLayouts;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardLayout;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -24,12 +29,15 @@ import frc.robot.commands.driving.Stop;
 import frc.robot.commands.driving.TeleopSwerve;
 import frc.robot.commands.driving.TimedTestDrive;
 import frc.robot.commands.driving.TimedTestWheelTurn;
+import frc.robot.commands.smartDashBoard.SendNote;
 import frc.robot.model.PathContainer;
 import frc.robot.service.MetricService;
 import frc.robot.subsystems.drivetrainIOLayers.DrivetrainIO;
 import frc.robot.subsystems.Vision;
 
 import static frc.robot.Constants.JoystickConstants.*;
+
+import java.util.Map;
 
 import com.pathplanner.lib.auto.NamedCommands;
 
@@ -46,6 +54,19 @@ import au.grapplerobotics.LaserCan;
  * subsystems, commands, and trigger mappings) should be declared here.
  */
 public class RobotContainer {
+
+  ShuffleboardTab note_tab = Shuffleboard.getTab("Notes");
+
+  GenericEntry note_entry = note_tab.add("Note", "")
+      .withPosition(0, 0)
+      .withSize(2, 1)
+      .getEntry();
+
+  ShuffleboardLayout elevatorCommands = note_tab
+      .getLayout("Send", BuiltInLayouts.kList)
+      .withSize(2, 2)
+      .withProperties(Map.of("Label position", "HIDDEN"));
+
   Field2d visionPoseEstimate = new Field2d();
   Field2d overallPoseEstimate = new Field2d();
 
@@ -73,14 +94,14 @@ public class RobotContainer {
   private final LaserCan lc;
 
   public RobotContainer() {
-
+    note_entry.setString("RobotContainer initialized");
     // try {
     // V = new Vision();
     // } catch (Exception e) {
     // System.out.println("Vision subsystem failed to initialize: " + e);
     // }
 
-    lc = initializeLaserCan();
+    lc = initLaserCAN();
 
     NamedCommands.registerCommand("Wheels", new AlineWheels(D));
     NamedCommands.registerCommand("Stop", new Stop(D));
@@ -96,7 +117,7 @@ public class RobotContainer {
     configureBindings();
   }
 
-  private LaserCan initializeLaserCan() {
+  private LaserCan initLaserCAN() {
     LaserCan lc = new LaserCan(1);
     try {
       lc.setRangingMode(LaserCan.RangingMode.SHORT);
@@ -109,6 +130,8 @@ public class RobotContainer {
   }
 
   private void configureBindings() {
+    /* Debug */
+    elevatorCommands.add("Send Note", new SendNote(note_entry.getString("")));
     /* Driver Controls */
     zeroGyro.onTrue(new InstantCommand(() -> D.ResetGyro()));
     D.setDefaultCommand(
@@ -140,6 +163,7 @@ public class RobotContainer {
   }
 
   public void Periodic() {
+    note_entry.getString("");
     updateVisionEst();
     Pose2d poseEstimate = D.getPose();
     overallPoseEstimate.setRobotPose(poseEstimate);

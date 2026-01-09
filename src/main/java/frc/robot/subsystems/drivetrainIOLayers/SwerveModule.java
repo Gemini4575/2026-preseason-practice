@@ -6,6 +6,9 @@ import static frc.robot.Constants.SwerveConstants.MOTOR_MAX_RPM;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Map;
+
+import org.ejml.generic.GenericMatrixOps_F32;
 
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkBase.PersistMode;
@@ -19,9 +22,15 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.RobotState;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInLayouts;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardLayout;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.math.SwerveModuleConstants;
@@ -30,11 +39,39 @@ import frc.robot.Constants.SwerveConstants;
 import frc.robot.model.MetricName;
 import frc.robot.service.MetricService;
 
+import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.configs.CANcoderConfiguration;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.signals.SensorDirectionValue;
+import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
+
 public class SwerveModule extends SubsystemBase {
+
+    // private ShuffleboardTab swerve_tab = Shuffleboard.getTab("DriveTrain");
+
+    // private GenericEntry m_driveMotor_set_entry = swerve_tab.add("m_driveMotor
+    // set", 0).getEntry();
+    // private GenericEntry m_driveMotor_actual_entry = swerve_tab.add("m_driveMotor
+    // actual", 0).getEntry();
+    // private GenericEntry m_turningMotor_set_entry =
+    // swerve_tab.add("m_turningMotor set", 0).getEntry();
+    // private GenericEntry m_turningMotor_actual_entry =
+    // swerve_tab.add("m_turningMotor actual", 0).getEntry();
+    // private GenericEntry m_driveMotor_velocity_entry =
+    // swerve_tab.add("m_driveMotor velocity", 0).getEntry();
+    // private GenericEntry m_driveMotor_get_entry = swerve_tab.add("m_driveMotor
+    // get", 0).getEntry();
+    // private GenericEntry m_drive_encoder_entry = swerve_tab.add("drive encoder",
+    // 0).getEntry();
+    // private GenericEntry m_turn_encoder_entry = swerve_tab.add("turn encoder",
+    // 0).getEntry();
+    // private GenericEntry target_entry = swerve_tab.add("target", 0).getEntry();
+    // private GenericEntry turnOutput_entry = swerve_tab.add("turnOutput",
+    // 0).getEntry();
 
     private static final double DISTANCE_CORRECTION_FACTOR = 0.97;
 
-    private PIDController turningPidController = new PIDController(3, 0.1, 0);
+    private PIDController turningPidController = new PIDController(2.9, 0.1, 0);
     // new ProfiledPIDController(
     // 3.1, // Proportional gain
     // 0.0, // Integral gain
@@ -57,12 +94,18 @@ public class SwerveModule extends SubsystemBase {
     private SparkMax driveMotor;
     private SparkMax angleMotor;
 
-    private AnalogInput Encoder;
+    private CANcoder Encoder;
     private RelativeEncoder m_driveEncoder;
 
     private double angleOffset;
 
     private int moduleNumber;
+
+    // ShuffleboardLayout module_layout = swerve_tab
+    // .getLayout("Elevator", BuiltInLayouts.kGrid)
+    // .withSize(2, 6)
+    // .withPosition(0, moduleNumber)
+    // .withProperties(Map.of("Label position", "HIDDEN"));
 
     private static final boolean STUCK_PROTECTION_ENABLED = true;
     private static final long ANGLE_STUCK_TIME_THRESHOLD_MS = 300;
@@ -72,15 +115,26 @@ public class SwerveModule extends SubsystemBase {
     private long angleCorrectionStartTime = -1;
 
     public SwerveModule(SwerveModuleConstants s) {
+
         driveMotor = new SparkMax(s.driveMotorID, MotorType.kBrushless);
         angleMotor = new SparkMax(s.angleMotorID, MotorType.kBrushless);
         SparkBaseConfig driveMotorConfig = new SparkMaxConfig();
         SparkBaseConfig angleMotorConfig = new SparkMaxConfig();
         driveMotorConfig.smartCurrentLimit(40, 40);
         driveMotorConfig.disableFollowerMode();
-        driveMotorConfig.inverted(true);
+
+        // Set inversion based on module number
+        // Modules 0 and 3 are NOT inverted, modules 1 and 2 ARE inverted
+        if (s.moduleNumber == 0 || s.moduleNumber == 3) {
+            driveMotorConfig.inverted(false);
+        } else {
+            driveMotorConfig.inverted(true);
+        }
+
         driveMotorConfig.idleMode(IdleMode.kBrake);
         angleMotorConfig.apply(driveMotorConfig);
+
+        angleMotorConfig.inverted(true);
 
         driveMotorConfig.signals.primaryEncoderPositionAlwaysOn(true);
         driveMotorConfig.signals.primaryEncoderPositionPeriodMs(5);
@@ -88,13 +142,18 @@ public class SwerveModule extends SubsystemBase {
         driveMotor.configure(driveMotorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         angleMotor.configure(angleMotorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
-        Encoder = new AnalogInput(s.cancoderID);
+        Encoder = new CANcoder(s.cancoderID);
+
+        CANcoderConfiguration cc_config = new CANcoderConfiguration();
+        cc_config.MagnetSensor.SensorDirection = SensorDirectionValue.CounterClockwise_Positive;
+        cc_config.MagnetSensor.MagnetOffset = s.angleOffset;
+        Encoder.getConfigurator().apply(cc_config);
 
         m_driveEncoder = driveMotor.getEncoder();
 
-        angleOffset = -s.angleOffset;
+        angleOffset = 0;
 
-        moduleNumber = s.cancoderID; // Assuming module number is based on drive motor ID for simplicity
+        this.moduleNumber = s.moduleNumber;
 
         turningPidController.enableContinuousInput(-Math.PI, Math.PI);
 
@@ -104,14 +163,11 @@ public class SwerveModule extends SubsystemBase {
 
         m_drivePIDController = new PIDController(s.pidP, s.pidI, 0);
 
-        m_drivePIDController.setIZone(0.06); // don't use ki if error is more than 6%
-        // this determines the max contribution of the ki factor. we should keep it
-        // close to the iZone for fine tuning
+        m_drivePIDController.setIZone(0.06);
         m_drivePIDController.setIntegratorRange(-0.06, 0.06);
 
         turningPidController.setIZone(Math.PI / 10);
         turningPidController.setIntegratorRange(-Math.PI / 20, Math.PI / 20);
-
     }
 
     @Override
@@ -153,9 +209,11 @@ public class SwerveModule extends SubsystemBase {
     }
 
     private double getRawAngle() {
-        var retVal = Encoder.getVoltage() / RobotController.getVoltage5V(); // convert voltage to %
-        retVal = 2.0 * Math.PI * retVal; // get % of circle encoder is reading
-        return retVal;
+        // double retVal = Encoder.getvl() / RobotController.getVoltage5V(); // convert
+        // voltage to %
+        // retVal = 2.0 * Math.PI * retVal; // get % of circle encoder is reading
+        // return retVal;
+        return Encoder.getAbsolutePosition().getValueAsDouble() * 2 * Math.PI;
     }
 
     /**
@@ -209,7 +267,6 @@ public class SwerveModule extends SubsystemBase {
         SmartDashboard.putNumber("Speed " + moduleNumber, currentSpeedPercentage);
         SmartDashboard.putNumber("[Swerve]Pre Optimize angle target degrees " + moduleNumber,
                 desiredState.angle.getDegrees());
-        // Optimize the reference state to avoid spinning further than 90 degrees
         SmartDashboard.putNumber("[Swerve]turn encoder" + moduleNumber, currentAngle);
 
         @SuppressWarnings("deprecation")
@@ -217,10 +274,7 @@ public class SwerveModule extends SubsystemBase {
 
         SmartDashboard.putNumber("[Swerve]After Optimize angle target degrees " + moduleNumber,
                 state.angle.getDegrees());
-        // KB Not being used right now might go back into use later
-        // final double driveOutput =
-        // drivingPidController.calculate(m_driveEncoder.getVelocity(),
-        // state.speedMetersPerSecond);
+
         MetricService.publish(MetricName.reqSpeed(moduleNumber), state.speedMetersPerSecond);
         MetricService.publish(MetricName.reqTurn(moduleNumber), state.angle.getRadians());
 
@@ -239,31 +293,24 @@ public class SwerveModule extends SubsystemBase {
         }
         SmartDashboard.putBoolean("[Swerve] stuck detector " + moduleNumber, stuck);
         if (STUCK_PROTECTION_ENABLED && stuck) {
-            // if stuck, turn 90 degrees away from where we were trying to turn
             state.angle = Rotation2d
                     .fromRadians(currentAngle + (currentAngle > state.angle.getRadians() ? 1.0 : -1.0) * Math.PI / 2.0);
             state.speedMetersPerSecond = 0.0;
             if (System.currentTimeMillis() - angleCorrectionStartTime > ANGLE_CORRECTION_TIME_THRESHOLD_MS) {
-                // reset the timer so we don't keep doing this.. may need to adjust this in the
-                // future
                 angleDivergenceStartTime = -1;
                 angleCorrectionStartTime = -1;
             }
         }
 
         final double turnOutput = turningPidController.calculate(currentAngle, state.angle.getRadians());
-        // final double turnOutput = Math.min (Math.max
-        // (turningPidController.calculate(encoderValue(), state.angle.getRadians());
-        // SmartDashboard.putNumber("[Swerve]pid " + moduleNumber, turnOutput);
-
-        // SmartDashboard.putNumber("[Swerve]Setpoint velocity",
-        // turningPidController.getSetpoint().velocity);
 
         final double driveOutput = (currentSpeedPercentage
                 + m_drivePIDController.calculate(
                         currentSpeedPercentage,
                         state.speedMetersPerSecond))
                 * state.angle.minus(Rotation2d.fromRadians(currentAngle)).getCos();
+
+        // No FlipSpeed needed - inversion is handled in motor configuration
         driveMotor.set(driveOutput);
 
         angleMotor.set((turnOutput / Math.PI));
@@ -271,27 +318,28 @@ public class SwerveModule extends SubsystemBase {
         MetricService.publish(MetricName.commandedSpeed(moduleNumber), driveOutput);
         MetricService.publish(MetricName.commandedTurn(moduleNumber), (turnOutput / Math.PI));
 
-        SmartDashboard.putNumber("[Swerve]m_driveMotor set " + moduleNumber,
-                driveOutput);
-        SmartDashboard.putNumber("[Swerve]m_turningMotor set " + moduleNumber,
-                turnOutput / SwerveConstants.kModuleMaxAngularVelocity);
+        // SmartDashboard.putNumber("[Swerve]m_driveMotor set " + moduleNumber,
+        // driveOutput);
+        // SmartDashboard.putNumber("[Swerve]m_turningMotor set " + moduleNumber,
+        // turnOutput / SwerveConstants.kModuleMaxAngularVelocity);
 
-        SmartDashboard.putNumber("[Swerve]m_driveMotor actual" + moduleNumber, getConvertedVelocity());
-        SmartDashboard.putNumber("[Swerve]m_driveMotor velocity" + moduleNumber, currentSpeedPercentage);
-        SmartDashboard.putNumber("[Swerve]m_driveMotor get" + moduleNumber, driveMotor.get());
-        SmartDashboard.putNumber("[Swerve]m_turningMotor actual" + moduleNumber, angleMotor.get());
+        // SmartDashboard.putNumber("[Swerve]m_driveMotor actual" + moduleNumber,
+        // getConvertedVelocity());
+        // SmartDashboard.putNumber("[Swerve]m_driveMotor velocity" + moduleNumber,
+        // currentSpeedPercentage);
+        // SmartDashboard.putNumber("[Swerve]m_driveMotor get" + moduleNumber,
+        // driveMotor.get());
+        // SmartDashboard.putNumber("[Swerve]m_turningMotor actual" + moduleNumber,
+        // angleMotor.get());
 
-        SmartDashboard.putNumber("[Swerve]drive encoder" + moduleNumber, m_driveEncoder.getPosition());
-        SmartDashboard.putNumber("[Swerve]turn encoder" + moduleNumber, currentAngle);
+        // SmartDashboard.putNumber("[Swerve]drive encoder" + moduleNumber,
+        // m_driveEncoder.getPosition());
+        // SmartDashboard.putNumber("[Swerve]turn encoder" + moduleNumber,
+        // currentAngle);
 
-        SmartDashboard.putNumber("[Swerve]turnOutput", turnOutput);
-        // SmartDashboard.putNumber("[Swerve]Drive", ((driveOutput + driveFeedforward)
-        // /2.1) /2);
-        // SmartDashboard.putNumber("[Swerve]Turning stuff", Math.max(turnOutput,
-        // turnFeedforward));
-        // SmartDashboard.putNumber("[Swerve]Turning stuff", turnOutput +
-        // turnFeedforward);
-        SmartDashboard.putNumber("[Swerve]target " + moduleNumber, state.angle.getRadians());
+        // SmartDashboard.putNumber("[Swerve]turnOutput", turnOutput);
+        // SmartDashboard.putNumber("[Swerve]target " + moduleNumber,
+        // state.angle.getRadians());
     }
 
     private void captureConfig() {

@@ -2,6 +2,9 @@ package frc.robot.model;
 
 public enum MetricName {
 
+    // message for data capture start
+    MESSAGE,
+
     // robot data
     LOCATION_ESTIMATE,
     AUTO_STATE,
@@ -69,6 +72,10 @@ public enum MetricName {
 
     public static MetricName driveEncoderValue(int moduleIdx) {
         return MetricName.valueOf("DRIVE_ENCODER_VALUE_M" + moduleIdx);
+    }
+
+    public static MetricName message() {
+        return MetricName.valueOf("MESSAGE");
     }
 
 }
