@@ -29,7 +29,6 @@ import frc.lib.util.SparkConfigUtils;
 import frc.robot.Constants.SwerveConstants;
 import frc.robot.model.MetricName;
 import frc.robot.service.MetricService;
-import com.ctre;
 
 public class SwerveModule extends SubsystemBase {
 
