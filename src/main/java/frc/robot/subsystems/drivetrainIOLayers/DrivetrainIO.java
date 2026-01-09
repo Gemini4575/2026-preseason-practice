@@ -12,15 +12,18 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.util.CoordinateConverter;
-import frc.robot.Constants.SwerveConstants.Mod0;
 import frc.robot.Constants.SwerveConstants.Mod1;
 import frc.robot.Constants.SwerveConstants.Mod2;
 import frc.robot.Constants.SwerveConstants.Mod3;
+import frc.robot.Constants.SwerveConstants.Mod4;
 import frc.robot.model.MetricName;
 import frc.robot.service.MetricService;
 
@@ -36,12 +39,23 @@ import com.studica.frc.AHRS.NavXUpdateRate;
 
 public class DrivetrainIO extends SubsystemBase {
 
+  private ShuffleboardTab drivetrain_tab = Shuffleboard.getTab("DriveTrain");
+
+  private GenericEntry driveRot_entry = drivetrain_tab.add("drive rot", 0)
+      .getEntry();
+  private GenericEntry driveX_entry = drivetrain_tab.add("drive x", 0)
+      .getEntry();
+  private GenericEntry driveY_entry = drivetrain_tab.add("drive y", 0)
+      .getEntry();
+  private GenericEntry gyro_entry = drivetrain_tab.add("gyro", 0)
+      .getEntry();
+
   private static final boolean shouldLogToFile = false;
 
-  private SwerveModule backLeft_0 = new SwerveModule(Mod2.constants);
-  private SwerveModule backRight_1 = new SwerveModule(Mod3.constants);
-  private SwerveModule frontRight_2 = new SwerveModule(Mod0.constants);
-  private SwerveModule frontLeft_3 = new SwerveModule(Mod1.constants);
+  private SwerveModule backLeft_0 = new SwerveModule(Mod3.constants);
+  private SwerveModule backRight_1 = new SwerveModule(Mod4.constants);
+  private SwerveModule frontRight_2 = new SwerveModule(Mod1.constants);
+  private SwerveModule frontLeft_3 = new SwerveModule(Mod2.constants);
 
   private final AHRS gyro = new AHRS(NavXComType.kMXP_SPI, NavXUpdateRate.k100Hz);
 
@@ -64,7 +78,6 @@ public class DrivetrainIO extends SubsystemBase {
 
   private final FileWriter logFileWriter;
 
-  // 67!!!!
   public double getAngle() {
     return gyro.getAngle();
   }
@@ -143,17 +156,19 @@ public class DrivetrainIO extends SubsystemBase {
         (c.vyMetersPerSecond / MaxMetersPersecond), (c.omegaRadiansPerSecond / kModuleMaxAngularVelocity), false);
   }
 
+  int timeDelay = 0;
+
   public void drive(double xSpeed, double ySpeed, double rot, boolean fieldRelative) {
-    SmartDashboard.putNumber("[Drivetrain]drive rot", rot + Rotate_Rot);
-    SmartDashboard.putNumber("[Drivetrain]drive xSpeed", xSpeed);
-    SmartDashboard.putNumber("[Drivetrain]drive ySpeed", ySpeed);
+    driveRot_entry.setDouble(rot + Rotate_Rot);
+    driveX_entry.setDouble(xSpeed);
+    driveY_entry.setDouble(ySpeed);
     MetricService.publish(MetricName.REQUESTED_SPEED_X, xSpeed);
     MetricService.publish(MetricName.REQUESTED_SPEED_Y, ySpeed);
     MetricService.publish(MetricName.REQUESTED_ROTATION, rot);
     xSpeed_cur = xSpeed;
     ySpeed_cur = ySpeed;
     rot_cur = rot + Rotate_Rot;
-    SmartDashboard.putNumber("[Drivetrain]Gyro", gyro.getAngle());
+    gyro_entry.setDouble(gyro.getAngle());
 
     var sourceChassisSpeeds = fieldRelative
         ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rot + Rotate_Rot, gyro.getRotation2d())
@@ -178,13 +193,17 @@ public class DrivetrainIO extends SubsystemBase {
     // SmartDashboard.putString("[Drivetrain]module 3",
     // swerveModuleStates[3].toString());
     if (xSpeed + ySpeed + rot == 0) {
-      setModuleStates(new SwerveModuleState[] {
-          new SwerveModuleState(0, new Rotation2d(-45)),
-          new SwerveModuleState(0, new Rotation2d(45)),
-          new SwerveModuleState(0, new Rotation2d(-45)),
-          new SwerveModuleState(0, new Rotation2d(45)),
-      });
+      timeDelay++;
+      if (timeDelay >= 12) {
+        setModuleStates(new SwerveModuleState[] {
+            new SwerveModuleState(0, new Rotation2d(-45)),
+            new SwerveModuleState(0, new Rotation2d(45)),
+            new SwerveModuleState(0, new Rotation2d(-45)),
+            new SwerveModuleState(0, new Rotation2d(45)),
+        });
+      }
     } else {
+      timeDelay = 0;
       setModuleStates(swerveModuleStates);
     }
   }
